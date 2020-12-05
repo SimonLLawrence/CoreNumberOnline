@@ -12,9 +12,5 @@
     <PackageReference Include="Binance.API.Csharp.Client" Version="1.4.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Model\" />
-  </ItemGroup>
-
 
 </Project>

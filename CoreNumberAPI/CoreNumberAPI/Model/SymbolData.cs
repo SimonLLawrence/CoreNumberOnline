@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using Binance.API.Csharp.Client.Models.Account;
 
-namespace CoreNumberBot
+namespace CoreNumberAPI.Model
 {
     public class SymbolData
     {

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
-using Binance.API.Csharp.Client.Models.Market;
+using CoreNumberAPI.Model;
 
 namespace CoreNumberBot
 {
