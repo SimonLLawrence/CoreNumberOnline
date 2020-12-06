@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace CoreNumberAPI.Model
 {
-    public class SymbolData
+    public class AlgoInstanceData
     {
         // State , dependancy plumbing 
         public Guid Id { get; set; }

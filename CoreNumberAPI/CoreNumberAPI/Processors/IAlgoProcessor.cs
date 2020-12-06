@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CoreNumberAPI.Model;
+using CoreNumberAPI.Repository;
+using CoreNumberAPI.Services;
 
 namespace CoreNumberAPI.Processors
 {
-    interface IAlgoProcessor
+    public interface IAlgoProcessor
     {
         string AlgorithmName { get; }
-        public void Process(DateTime executionTime);
+        void Process(AlgoInstanceData instance, IExchange exchange, IApiSecrets secret, IAlgoInstanceDataRepository algoInstanceRepository , DateTime utcNow);
     }
 }

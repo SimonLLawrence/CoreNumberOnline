@@ -12,9 +12,9 @@ namespace CoreNumberBot
 {
     public class CoreNumberProcessor : IAlgoProcessor
     {
-        private readonly List<SymbolData> _symbolData = new List<SymbolData>
+        private readonly List<AlgoInstanceData> _symbolData = new List<AlgoInstanceData>
         {
-            new SymbolData
+            new AlgoInstanceData
             {
                 TokenSymbol = "DOT",
                 CashTokenSymbol = "USDT",
@@ -32,7 +32,7 @@ namespace CoreNumberBot
 
         public string AlgorithmName { get; } = "CoreNumberCompound";
 
-        public void Process(DateTime executionTime)
+        public void Process(DateTime executionTime, AlgoInstanceData data)
         {
             foreach (var data in LoadSymbolData())
             {
@@ -47,13 +47,13 @@ namespace CoreNumberBot
             }
         }
 
-        private SymbolData OutstandingOrders(SymbolData data)
+        private AlgoInstanceData OutstandingOrders(AlgoInstanceData data)
         {
             data.OutstandingOrders = _binanceClient.GetCurrentOpenOrders($"{data.TokenSymbol}{data.CashTokenSymbol}").Result;
             return data;
         }
 
-        private void CalculatePnL(SymbolData data)
+        private void CalculatePnL(AlgoInstanceData data)
         {
             var daysRunning = (DateTime.Now - data.StartingDate).Days;
             if (daysRunning == 0)
@@ -83,18 +83,18 @@ namespace CoreNumberBot
             Console.WriteLine($"Creating Client {key} {secret}");
         }
 
-        private IEnumerable<SymbolData> LoadSymbolData()
+        private IEnumerable<AlgoInstanceData> LoadSymbolData()
         {
             Console.WriteLine("Loading symbols");
             return _symbolData;
         }
 
-        private void SaveData(SymbolData data)
+        private void SaveData(AlgoInstanceData data)
         {
             Console.WriteLine("Saving data");
         }
 
-        private SymbolData OrderCorrectionAmount(SymbolData data)
+        private AlgoInstanceData OrderCorrectionAmount(AlgoInstanceData data)
         {
             if (data.BuySellAmount != 0)
             {
@@ -121,7 +121,7 @@ namespace CoreNumberBot
             return data;
         }
 
-        private SymbolData CancelExistingOrder(SymbolData data)
+        private AlgoInstanceData CancelExistingOrder(AlgoInstanceData data)
         {
          
             foreach (var openOrder in data.OutstandingOrders)
@@ -140,7 +140,7 @@ namespace CoreNumberBot
             return data;
         }
 
-        public SymbolData SetCoreNumber(SymbolData data)
+        public AlgoInstanceData SetCoreNumber(AlgoInstanceData data)
         {
             if (!data.OutstandingOrders.Any() || data.CoreNumber == 0 )
             {
@@ -178,7 +178,7 @@ namespace CoreNumberBot
             return data;
         }
 
-        private SymbolData GetDollarPurchaseAmount(SymbolData data)
+        private AlgoInstanceData GetDollarPurchaseAmount(AlgoInstanceData data)
         {
             Console.WriteLine("Getting dollar purchase amount");
             data.BuySellAmount = 0;
@@ -195,7 +195,7 @@ namespace CoreNumberBot
             return data;
         }
 
-        private SymbolData GetCashAndTokenBalance(SymbolData data)
+        private AlgoInstanceData GetCashAndTokenBalance(AlgoInstanceData data)
         {
             var accountInfo = _binanceClient.GetAccountInfo().Result;
             data.CashTokenValue = accountInfo.Balances.Single(x => x.Asset == $"{data.CashTokenSymbol}").Free;
@@ -204,7 +204,7 @@ namespace CoreNumberBot
             return data;
         }
 
-        private SymbolData GetCurrentPrice(SymbolData data)
+        private AlgoInstanceData GetCurrentPrice(AlgoInstanceData data)
         {
             var orderBook =_binanceClient.GetOrderBook($"{data.TokenSymbol}{data.CashTokenSymbol}").Result;
             data.TokenAskPrice = orderBook.Asks.First().Price;

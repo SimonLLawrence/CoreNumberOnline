@@ -4,7 +4,7 @@ using CoreNumberAPI.Model;
 
 namespace CoreNumberAPI.Factory
 {
-    public class SecretFactory
+    public class SecretFactory : ISecretFactory
     {
         readonly List<IApiSecrets> _secrets;
 

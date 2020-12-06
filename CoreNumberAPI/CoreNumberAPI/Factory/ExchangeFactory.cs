@@ -4,7 +4,7 @@ using CoreNumberAPI.Services;
 
 namespace CoreNumberAPI.Factory
 {
-    public class ExchangeFactory
+    public class ExchangeFactory : IExchangeFactory
     {
         private readonly List<IExchange> _availableExchanges;
 
