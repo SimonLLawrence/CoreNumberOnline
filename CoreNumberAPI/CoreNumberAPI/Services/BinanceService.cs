@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
+using CoreNumberAPI.Factory;
 
 
 namespace CoreNumberAPI.Services
@@ -11,18 +12,19 @@ namespace CoreNumberAPI.Services
     public class BinanceService : IExchange
     {
         private BinanceClient _binanceClient;
-        private ApiSecrets _apiSecrets;
+        private SecretFactory _secretFactory;
 
         public string ExchangeName => "BINANCE";
 
-        public BinanceService(ApiSecrets secretes)
+        public BinanceService(SecretFactory secretFactory)
         {
-            _apiSecrets = secretes;
+            _secretFactory = secretFactory;
         }
 
-        public void OpenClient(ApiSecrets secrets)
+        public void OpenClient(string  secretId)
         {
-            var apiClient = new ApiClient(_apiSecrets.Key, _apiSecrets.Secret);
+            var secret = _secretFactory.GetApiSecret(secretId);
+            var apiClient = new ApiClient(secret.Key, secret.Secret);
             _binanceClient = new BinanceClient(apiClient);
         }
 

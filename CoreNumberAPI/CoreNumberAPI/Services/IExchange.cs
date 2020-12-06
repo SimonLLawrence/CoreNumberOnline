@@ -9,7 +9,7 @@ namespace CoreNumberAPI.Services
     public interface IExchange
     {
         public string ExchangeName { get; }
-        public void OpenClient(ApiSecrets secrets);
+        public void OpenClient(string secretId);
         public decimal GetBalance(string symbol);
         public PriceResult GetPrice(string symbol, string denominatorSymbol, DateTime? pointInTime = null);
         public List<Order> GetOpenOrders(string symbol, string denominatorSymbol);

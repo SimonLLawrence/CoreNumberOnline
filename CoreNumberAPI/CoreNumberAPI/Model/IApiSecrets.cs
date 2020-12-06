@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CoreNumberAPI.Model
 {
-    public class ApiSecrets : IApiSecrets
+    public interface IApiSecrets
     {
         public string SecretId { get; set; }
         public string Secret { get; set; }

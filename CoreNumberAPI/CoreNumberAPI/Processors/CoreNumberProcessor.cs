@@ -6,10 +6,11 @@ using System.Text;
 using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
 using CoreNumberAPI.Model;
+using CoreNumberAPI.Processors;
 
 namespace CoreNumberBot
 {
-    public class CoreNumberProcessor
+    public class CoreNumberProcessor : IAlgoProcessor
     {
         private readonly List<SymbolData> _symbolData = new List<SymbolData>
         {
@@ -29,7 +30,9 @@ namespace CoreNumberBot
             OpenClient();
         }
 
-        public void Process()
+        public string AlgorithmName { get; } = "CoreNumberCompound";
+
+        public void Process(DateTime executionTime)
         {
             foreach (var data in LoadSymbolData())
             {
