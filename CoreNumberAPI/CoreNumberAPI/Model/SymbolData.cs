@@ -8,6 +8,7 @@ namespace CoreNumberAPI.Model
         public Guid Id { get; set; }
         public string ProcessorID { get; set; }
         public string SecretID { get; set;}
+        public string State { get; set; }
         public string TokenSymbol { get; set; }
         public decimal TokenSize { get; set; } = 0;
         public string CashTokenSymbol { get; set; } = "USDT";
@@ -22,7 +23,6 @@ namespace CoreNumberAPI.Model
         public decimal StartingTokenSize { get; set; } = 67;
         public decimal StartingCashAmount { get; set; } = 67;
         public DateTime StartingDate = new DateTime(2020, 9, 8, 13, 0, 0);
-
 
         public decimal TokenBidPrice { get; set; } = 0;
         public decimal TokenAskPrice { get; set; } = 0;
