@@ -26,6 +26,7 @@ namespace CoreNumberAPI.Services
             var secret = _secretFactory.GetApiSecret(secretId);
             var apiClient = new ApiClient(secret.Key, secret.Secret);
             _binanceClient = new BinanceClient(apiClient);
+            Console.WriteLine($"Creating Client {secret.Key} {secret.Secret}");
         }
 
         public decimal GetBalance(string symbol)

@@ -11,6 +11,8 @@ namespace CoreNumberAPI.Processors
     public interface IAlgoProcessor
     {
         string AlgorithmName { get; }
-        void Process(AlgoInstanceData instance, IExchange exchange, IApiSecrets secret, IAlgoInstanceDataRepository algoInstanceRepository , DateTime utcNow);
+        void Initialise(AlgoInstanceData instance);
+        void Process(AlgoInstanceData instance, DateTime timeOfProcess);
+        void Shutdown(AlgoInstanceData instance);
     }
 }

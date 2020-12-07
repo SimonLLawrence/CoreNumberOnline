@@ -53,11 +53,13 @@ namespace CoreNumberAPI.Processors
             if (State == "RUNNING")
             {
                 var processor = _algoProcessorFactory.GetAlgoProcessor(instance.ProcessorID);
-                var exchange = _exchangeFactory.GetExchange(instance.ExchangeID);
-                var secret = _secretFactory.GetApiSecret(instance.SecretID);
+                if (instance.State =="CREATED")
+                {
+                    processor.Initialise(instance);
+                }
                 if (instance.State == "STARTED")
                 {
-                    processor.Process(instance, exchange, secret, _algoInstanceRepository, DateTime.UtcNow);
+                    processor.Process(instance, DateTime.UtcNow);
                     _algoInstanceRepository.Save(instance);
                 }
             }
@@ -89,7 +91,7 @@ namespace CoreNumberAPI.Processors
                 SecretID = secr.SecretId,
                 ExchangeID = exch.ExchangeName,
                 ProcessorID = algo.AlgorithmName,
-                State = "INITIALIZED"
+                State = "CREATED"
             };
             _algoInstanceRepository.Save(newInstance);
             return algoInstId.ToString();

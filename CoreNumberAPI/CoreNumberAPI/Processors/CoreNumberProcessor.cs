@@ -7,210 +7,202 @@ using Binance.API.Csharp.Client;
 using Binance.API.Csharp.Client.Models.Enums;
 using CoreNumberAPI.Model;
 using CoreNumberAPI.Processors;
+using CoreNumberAPI.Repository;
+using CoreNumberAPI.Services;
+using CoreNumberAPI.Factory;
 
 namespace CoreNumberBot
 {
     public class CoreNumberProcessor : IAlgoProcessor
     {
-        private readonly List<AlgoInstanceData> _symbolData = new List<AlgoInstanceData>
-        {
-            new AlgoInstanceData
-            {
-                TokenSymbol = "DOT",
-                CashTokenSymbol = "USDT",
-                CoreNumber = 0,
-                MinimTokenPriceChangePercentage = 3.0M
-            }
-        };
+        private IExchangeFactory _exchangeFactory;
+        private IAlgoInstanceDataRepository _algoInstanceRepository;
+        private IExchange _exchange = null;
+        private AlgoInstanceData _algoInstanceData;
+        private DateTime _currentProcessingTime;
 
-        private BinanceClient _binanceClient;
-
-        public CoreNumberProcessor()
+        public CoreNumberProcessor(IExchangeFactory exchangeFactory,  IAlgoInstanceDataRepository algoInstanceRepository)
         {
-            OpenClient();
+            _exchangeFactory = exchangeFactory;
+            _algoInstanceRepository = algoInstanceRepository;
+        }
+
+        public void Initialise(AlgoInstanceData instance)
+        {
+            _algoInstanceData = instance;
+            _exchange = _exchangeFactory.GetExchange(instance.ExchangeID);
+            _exchange.OpenClient(instance.SecretID);
+        }
+
+        public void Process(AlgoInstanceData instance, DateTime utcNow)
+        {
+            _currentProcessingTime = utcNow;
+            OutstandingOrders(instance);
+            GetCashAndTokenBalance(instance);
+            GetCurrentPrice(instance);
+            SetCoreNumber(instance);
+            GetDollarPurchaseAmount(instance);
+            OrderCorrectionAmount(instance);
+            CalculatePnL(instance);
+        }
+
+        public void Shutdown(AlgoInstanceData instance)
+        {
+            Console.WriteLine($"Shutting down algo instance {instance.Id}");
         }
 
         public string AlgorithmName { get; } = "CoreNumberCompound";
 
-        public void Process(DateTime executionTime, AlgoInstanceData data)
+  
+        private AlgoInstanceData OutstandingOrders(AlgoInstanceData instance)
         {
-            foreach (var data in LoadSymbolData())
-            {
-                OutstandingOrders(data);
-                GetCashAndTokenBalance(data);
-                GetCurrentPrice(data);
-                SetCoreNumber(data);
-                GetDollarPurchaseAmount(data);
-                OrderCorrectionAmount(data);
-                SaveData(data);
-                CalculatePnL(data);
-            }
+            instance.OutstandingOrders = _exchange.GetOpenOrders(instance.TokenSymbol, instance.CashTokenSymbol);
+            return instance;
         }
 
-        private AlgoInstanceData OutstandingOrders(AlgoInstanceData data)
+        private void CalculatePnL(AlgoInstanceData instance)
         {
-            data.OutstandingOrders = _binanceClient.GetCurrentOpenOrders($"{data.TokenSymbol}{data.CashTokenSymbol}").Result;
-            return data;
-        }
-
-        private void CalculatePnL(AlgoInstanceData data)
-        {
-            var daysRunning = (DateTime.Now - data.StartingDate).Days;
+            var daysRunning = (DateTime.Now - instance.StartingDate).Days;
             if (daysRunning == 0)
             {
-                Console.WriteLine($"Estimated PnL is {data.EstimatedPnL}");
+                Console.WriteLine($"Estimated PnL is {instance.EstimatedPnL}");
             }
             else
             {
-                var dailyProfit = data.EstimatedPnL / daysRunning;
-                var dailyProfitPerc = (dailyProfit / (data.StartingCashAmount + (data.StartingTokenSize * data.TokenPrice)))*100;
-                var currentTotal = data.CashTokenValue + (data.TokenSize * data.TokenPrice);
-                var initalTotal = data.StartingCashAmount + (data.StartingTokenSize * data.TokenPrice);
+                var dailyProfit = instance.EstimatedPnL / daysRunning;
+                var dailyProfitPerc = (dailyProfit / (instance.StartingCashAmount + (instance.StartingTokenSize * instance.TokenPrice)))*100;
+                var currentTotal = instance.CashTokenValue + (instance.TokenSize * instance.TokenPrice);
+                var initalTotal = instance.StartingCashAmount + (instance.StartingTokenSize * instance.TokenPrice);
                 Console.WriteLine($"Initial value {initalTotal}");
                 Console.WriteLine($"Current value {currentTotal}");
                 Console.WriteLine($"Gain is ${currentTotal - initalTotal}");
-                Console.WriteLine($"Estimated PnL per day is ${data.EstimatedPnL / daysRunning} or {dailyProfitPerc}%, running for {daysRunning} days");
+                Console.WriteLine($"Estimated PnL per day is ${instance.EstimatedPnL / daysRunning} or {dailyProfitPerc}%, running for {daysRunning} days");
             }
         }
 
-        private void OpenClient()
+        private AlgoInstanceData OrderCorrectionAmount(AlgoInstanceData instance)
         {
-            var key = "ZnlSBphY";
-            var secret = "AZikQ";
-            var apiClient = new ApiClient(key,secret);
-            _binanceClient = new BinanceClient(apiClient);
-
-            Console.WriteLine($"Creating Client {key} {secret}");
-        }
-
-        private IEnumerable<AlgoInstanceData> LoadSymbolData()
-        {
-            Console.WriteLine("Loading symbols");
-            return _symbolData;
-        }
-
-        private void SaveData(AlgoInstanceData data)
-        {
-            Console.WriteLine("Saving data");
-        }
-
-        private AlgoInstanceData OrderCorrectionAmount(AlgoInstanceData data)
-        {
-            if (data.BuySellAmount != 0)
+            if (instance.BuySellAmount != 0)
             {
-                CancelExistingOrder(data);
-                var side = data.BuySellAmount > 0 ? OrderSide.BUY : OrderSide.SELL;
+                CancelExistingOrder(instance);
+                var side = instance.BuySellAmount > 0 ? "BUY" : "SELL";
 
-                if (side == OrderSide.BUY && data.BuySellAmount > data.CashTokenValue)
+                if (side == "BUY" && instance.BuySellAmount > instance.CashTokenValue)
                 {
-                    return data;
+                    return instance;
                 }
 
-                var symbol = $"{data.TokenSymbol}{data.CashTokenSymbol}";
-                var size = decimal.Round(Math.Abs(data.BuySellAmount) / data.TokenAskPrice, 2);
-                var price = decimal.Round(data.TokenAskPrice, 4);
+                var symbol = $"{instance.TokenSymbol}{instance.CashTokenSymbol}";
+                var size = decimal.Round(Math.Abs(instance.BuySellAmount) / instance.TokenAskPrice, 2);
+                var price = decimal.Round(instance.TokenAskPrice, 4);
 
-                if ((size * price) < data.MinimumDollarPurchaceSize)
+                if ((size * price) < instance.MinimumDollarPurchaceSize)
                 {
-                    size = decimal.Round(data.MinimumDollarPurchaceSize / price,2);
+                    size = decimal.Round(instance.MinimumDollarPurchaceSize / price,2);
                 }
 
                 Console.WriteLine($"Placing order {symbol} {side} for {size} at {price} = {price * size} dollars");
-                var buyOrder = _binanceClient.PostNewOrder(symbol, size, price, side).Result;
+                var order = new Order
+                {
+                    Symbol = instance.TokenSymbol,
+                    DenominatorSybol = instance.CashTokenSymbol,
+                    Size = size,
+                    Side = side,
+                    Price = price
+                };
+                _exchange.CreateOrder(order);
             }
-            return data;
+            return instance;
         }
 
-        private AlgoInstanceData CancelExistingOrder(AlgoInstanceData data)
+        private AlgoInstanceData CancelExistingOrder(AlgoInstanceData instance)
         {
          
-            foreach (var openOrder in data.OutstandingOrders)
+            foreach (var openOrder in instance.OutstandingOrders)
             {
                 try
                 {
-                    Console.WriteLine($"cancelling existing  order with id {openOrder.OrderId}");
-                    var canceledOrder = _binanceClient
-                        .CancelOrder($"{data.TokenSymbol}{data.CashTokenSymbol}", openOrder.OrderId).Result;
+                    Console.WriteLine($"cancelling existing  order with id {openOrder.Reference}");
+                    var canceledOrder = _exchange.CancelOrder(openOrder);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Exception canceling order  {openOrder.OrderId}" + ex.ToString());
+                    Console.WriteLine($"Exception canceling order  {openOrder.Reference}" + ex.ToString());
                 }
             }
-            return data;
+            return instance;
         }
 
-        public AlgoInstanceData SetCoreNumber(AlgoInstanceData data)
+        public AlgoInstanceData SetCoreNumber(AlgoInstanceData instance)
         {
-            if (!data.OutstandingOrders.Any() || data.CoreNumber == 0 )
+            if (!instance.OutstandingOrders.Any() || instance.CoreNumber == 0 )
             {
-                Console.WriteLine($"Checking core number {data.CoreNumber}");
+                Console.WriteLine($"Checking core number {instance.CoreNumber}");
 
-                decimal cashAsPercentageOfTokenCashValue = (data.CashTokenValue / data.TokenDollarValue) * 100;
+                decimal cashAsPercentageOfTokenCashValue = (instance.CashTokenValue / instance.TokenDollarValue) * 100;
 
-                Console.WriteLine($"Token value {data.TokenDollarValue}, cash on hand {data.CashTokenValue} as percentage {cashAsPercentageOfTokenCashValue}");
+                Console.WriteLine($"Token value {instance.TokenDollarValue}, cash on hand {instance.CashTokenValue} as percentage {cashAsPercentageOfTokenCashValue}");
 
-                if (data.CashTokenValue == 0)
+                if (instance.CashTokenValue == 0)
                 {
-                    data.CoreNumber = data.TokenDollarValue - ((data.TokenDollarValue / 100) * data.CashValueStartingPercentage);
-                    Console.WriteLine("Zero cash available setting core number to {data.CoreNumber}");
+                    instance.CoreNumber = instance.TokenDollarValue - ((instance.TokenDollarValue / 100) * instance.CashValueStartingPercentage);
+                    Console.WriteLine($"Zero cash available setting core number to {instance.CoreNumber}");
                 }
-                else if (cashAsPercentageOfTokenCashValue <= data.CashValueMinimumPercentage)
+                else if (cashAsPercentageOfTokenCashValue <= instance.CashValueMinimumPercentage)
                 {
-                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} < minimum percentage {data.CashValueMinimumPercentage}");
-                    data.CoreNumber = (data.TokenDollarValue + data.CashTokenValue) - (((data.TokenDollarValue + data.CashTokenValue) / 100) * data.CashValueStartingPercentage);
-                    Console.WriteLine($"Setting core number to {data.CoreNumber}");
+                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} < minimum percentage {instance.CashValueMinimumPercentage}");
+                    instance.CoreNumber = (instance.TokenDollarValue + instance.CashTokenValue) - (((instance.TokenDollarValue + instance.CashTokenValue) / 100) * instance.CashValueStartingPercentage);
+                    Console.WriteLine($"Setting core number to {instance.CoreNumber}");
                 }
-                else if (cashAsPercentageOfTokenCashValue >= data.CashValueMaximumPercentage)
+                else if (cashAsPercentageOfTokenCashValue >= instance.CashValueMaximumPercentage)
                 {
-                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} > minimum percentage {data.CashValueMinimumPercentage}");
-                    data.CoreNumber = (data.TokenDollarValue + data.CashTokenValue) - (((data.TokenDollarValue + data.CashTokenValue) / 100) * data.CashValueStartingPercentage);
-                    Console.WriteLine($"Setting core number to {data.CoreNumber}");
+                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} > minimum percentage {instance.CashValueMinimumPercentage}");
+                    instance.CoreNumber = (instance.TokenDollarValue + instance.CashTokenValue) - (((instance.TokenDollarValue + instance.CashTokenValue) / 100) * instance.CashValueStartingPercentage);
+                    Console.WriteLine($"Setting core number to {instance.CoreNumber}");
                 }
 
-                if (data.CoreNumber == 0)
+                if (instance.CoreNumber == 0)
                 {
                     Console.WriteLine("Core number not currently available");
-                    data.CoreNumber = (data.TokenDollarValue + data.CashTokenValue) - (((data.TokenDollarValue + data.CashTokenValue) / 100) * data.CashValueStartingPercentage);
-                    Console.WriteLine($"Setting core number to {data.CoreNumber}");
+                    instance.CoreNumber = (instance.TokenDollarValue + instance.CashTokenValue) - (((instance.TokenDollarValue + instance.CashTokenValue) / 100) * instance.CashValueStartingPercentage);
+                    Console.WriteLine($"Setting core number to {instance.CoreNumber}");
                 }
             }
-            return data;
+            return instance;
         }
 
-        private AlgoInstanceData GetDollarPurchaseAmount(AlgoInstanceData data)
+        private AlgoInstanceData GetDollarPurchaseAmount(AlgoInstanceData instance)
         {
             Console.WriteLine("Getting dollar purchase amount");
-            data.BuySellAmount = 0;
-            var correctionPercentage = ((data.CoreNumber - data.TokenDollarValue ) /data.CoreNumber) * 100;
-            Console.WriteLine($"Correction percentage is {Math.Abs(correctionPercentage)}  minimum percentage is {data.MinimTokenPriceChangePercentage}");
-            if (Math.Abs(correctionPercentage) > data.MinimTokenPriceChangePercentage)
+            instance.BuySellAmount = 0;
+            var correctionPercentage = ((instance.CoreNumber - instance.TokenDollarValue ) / instance.CoreNumber) * 100;
+            Console.WriteLine($"Correction percentage is {Math.Abs(correctionPercentage)}  minimum percentage is {instance.MinimTokenPriceChangePercentage}");
+            if (Math.Abs(correctionPercentage) > instance.MinimTokenPriceChangePercentage)
             {
                 if (correctionPercentage != 0)
                 {
-                    data.BuySellAmount = (data.CoreNumber / 100) * correctionPercentage;
+                    instance.BuySellAmount = (instance.CoreNumber / 100) * correctionPercentage;
                 }
-                Console.WriteLine($"Setting BuySellAmount to {data.BuySellAmount}");
+                Console.WriteLine($"Setting BuySellAmount to {instance.BuySellAmount}");
             }
-            return data;
+            return instance;
         }
 
-        private AlgoInstanceData GetCashAndTokenBalance(AlgoInstanceData data)
+        private AlgoInstanceData GetCashAndTokenBalance(AlgoInstanceData instance)
         {
-            var accountInfo = _binanceClient.GetAccountInfo().Result;
-            data.CashTokenValue = accountInfo.Balances.Single(x => x.Asset == $"{data.CashTokenSymbol}").Free;
-            data.TokenSize = accountInfo.Balances.Single(x => x.Asset == $"{data.TokenSymbol}").Free;
-            Console.WriteLine($"Total cash available {data.CashTokenValue} , number of {data.TokenSymbol} tokens {data.TokenSize}");
-            return data;
+            instance.CashTokenValue = _exchange.GetBalance(instance.CashTokenSymbol);
+            instance.TokenSize = _exchange.GetBalance(instance.TokenSymbol);
+            Console.WriteLine($"Total cash available {instance.CashTokenValue} , number of {instance.TokenSymbol} tokens {instance.TokenSize}");
+            return instance;
         }
 
-        private AlgoInstanceData GetCurrentPrice(AlgoInstanceData data)
+        private AlgoInstanceData GetCurrentPrice(AlgoInstanceData instance)
         {
-            var orderBook =_binanceClient.GetOrderBook($"{data.TokenSymbol}{data.CashTokenSymbol}").Result;
-            data.TokenAskPrice = orderBook.Asks.First().Price;
-            data.TokenBidPrice = orderBook.Bids.First().Price;
-            Console.WriteLine($"Order book for {data.TokenSymbol} has ask of {data.TokenAskPrice} and bid of {data.TokenBidPrice}");
-            return data;
+            var price = _exchange.GetPrice(instance.TokenSymbol, instance.CashTokenSymbol);
+            instance.TokenAskPrice = price.AskPrice;
+            instance.TokenBidPrice = price.Price;
+            Console.WriteLine($"Order book for {instance.TokenSymbol} has ask of {instance.TokenAskPrice} and bid of {instance.TokenBidPrice}");
+            return instance;
         }
     }
 }
