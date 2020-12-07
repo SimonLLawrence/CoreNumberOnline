@@ -57,6 +57,7 @@ namespace CoreNumberAPI.Processors
                 var secret = _secretFactory.GetApiSecret(instance.SecretID);
                 if (instance.State == "STARTED")
                 {
+                    exchange.OpenClient(instance.SecretID);
                     processor.Process(instance, exchange, secret, _algoInstanceRepository, DateTime.UtcNow);
                     _algoInstanceRepository.Save(instance);
                 }
