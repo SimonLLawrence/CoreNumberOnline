@@ -13,28 +13,28 @@ using CoreNumberAPI.Factory;
 
 namespace CoreNumberBot
 {
-    public class CoreNumberProcessor : IAlgoProcessor
+    public class CoreNumberProcessor : IBotProcessor
     {
         private IExchangeFactory _exchangeFactory;
-        private IAlgoInstanceDataRepository _algoInstanceRepository;
+        private IBotInstanceDataRepository _botInstanceRepository;
         private IExchange _exchange = null;
-        private AlgoInstanceData _algoInstanceData;
+        private BotInstanceData _botInstanceData;
         private DateTime _currentProcessingTime;
 
-        public CoreNumberProcessor(IExchangeFactory exchangeFactory,  IAlgoInstanceDataRepository algoInstanceRepository)
+        public CoreNumberProcessor(IExchangeFactory exchangeFactory,  IBotInstanceDataRepository botInstanceRepository)
         {
             _exchangeFactory = exchangeFactory;
-            _algoInstanceRepository = algoInstanceRepository;
+            _botInstanceRepository = botInstanceRepository;
         }
 
-        public void Initialise(AlgoInstanceData instance)
+        public void Initialise(BotInstanceData instance)
         {
-            _algoInstanceData = instance;
+            _botInstanceData = instance;
             _exchange = _exchangeFactory.GetExchange(instance.ExchangeID);
             _exchange.OpenClient(instance.SecretID);
         }
 
-        public void Process(AlgoInstanceData instance, DateTime utcNow)
+        public void Process(BotInstanceData instance, DateTime utcNow)
         {
             _currentProcessingTime = utcNow;
             OutstandingOrders(instance);
@@ -46,21 +46,21 @@ namespace CoreNumberBot
             CalculatePnL(instance);
         }
 
-        public void Shutdown(AlgoInstanceData instance)
+        public void Shutdown(BotInstanceData instance)
         {
             Console.WriteLine($"Shutting down algo instance {instance.Id}");
         }
 
-        public string AlgorithmName { get; } = "CoreNumberCompound";
+        public string BotProcessorName { get; } = "CoreNumberCompound";
 
   
-        private AlgoInstanceData OutstandingOrders(AlgoInstanceData instance)
+        private BotInstanceData OutstandingOrders(BotInstanceData instance)
         {
             instance.OutstandingOrders = _exchange.GetOpenOrders(instance.TokenSymbol, instance.CashTokenSymbol);
             return instance;
         }
 
-        private void CalculatePnL(AlgoInstanceData instance)
+        private void CalculatePnL(BotInstanceData instance)
         {
             var daysRunning = (DateTime.Now - instance.StartingDate).Days;
             if (daysRunning == 0)
@@ -80,7 +80,7 @@ namespace CoreNumberBot
             }
         }
 
-        private AlgoInstanceData OrderCorrectionAmount(AlgoInstanceData instance)
+        private BotInstanceData OrderCorrectionAmount(BotInstanceData instance)
         {
             if (instance.BuySellAmount != 0)
             {
@@ -115,7 +115,7 @@ namespace CoreNumberBot
             return instance;
         }
 
-        private AlgoInstanceData CancelExistingOrder(AlgoInstanceData instance)
+        private BotInstanceData CancelExistingOrder(BotInstanceData instance)
         {
          
             foreach (var openOrder in instance.OutstandingOrders)
@@ -133,7 +133,7 @@ namespace CoreNumberBot
             return instance;
         }
 
-        public AlgoInstanceData SetCoreNumber(AlgoInstanceData instance)
+        public BotInstanceData SetCoreNumber(BotInstanceData instance)
         {
             if (!instance.OutstandingOrders.Any() || instance.CoreNumber == 0 )
             {
@@ -171,7 +171,7 @@ namespace CoreNumberBot
             return instance;
         }
 
-        private AlgoInstanceData GetDollarPurchaseAmount(AlgoInstanceData instance)
+        private BotInstanceData GetDollarPurchaseAmount(BotInstanceData instance)
         {
             Console.WriteLine("Getting dollar purchase amount");
             instance.BuySellAmount = 0;
@@ -188,7 +188,7 @@ namespace CoreNumberBot
             return instance;
         }
 
-        private AlgoInstanceData GetCashAndTokenBalance(AlgoInstanceData instance)
+        private BotInstanceData GetCashAndTokenBalance(BotInstanceData instance)
         {
             instance.CashTokenValue = _exchange.GetBalance(instance.CashTokenSymbol);
             instance.TokenSize = _exchange.GetBalance(instance.TokenSymbol);
@@ -196,7 +196,7 @@ namespace CoreNumberBot
             return instance;
         }
 
-        private AlgoInstanceData GetCurrentPrice(AlgoInstanceData instance)
+        private BotInstanceData GetCurrentPrice(BotInstanceData instance)
         {
             var price = _exchange.GetPrice(instance.TokenSymbol, instance.CashTokenSymbol);
             instance.TokenAskPrice = price.AskPrice;

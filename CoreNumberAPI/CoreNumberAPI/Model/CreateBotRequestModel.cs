@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace CoreNumberAPI.Model
 {
-    public class CreateAlgoRequestModel
+    public class CreateBotRequestModel
     {
-        public string AlgoName { get; set; }
+        public string BotName { get; set; }
         public string ExchangeName { get; set; }
         public string Key { get; set; } 
         public string Secret { get; set; }

@@ -6,8 +6,8 @@ using CoreNumberAPI.Processors;
 
 namespace CoreNumberAPI.Factory
 {
-    public interface IAlgoProcessorFactory
+    public interface IBotProcessorFactory
     {
-        IAlgoProcessor GetAlgoProcessor(string algoNameId);
+        IBotProcessor GetBotProcessor(string botNameId);
     }
 }

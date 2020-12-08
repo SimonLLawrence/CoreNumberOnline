@@ -8,11 +8,11 @@ using CoreNumberAPI.Services;
 
 namespace CoreNumberAPI.Processors
 {
-    public interface IAlgoProcessor
+    public interface IBotProcessor
     {
-        string AlgorithmName { get; }
-        void Initialise(AlgoInstanceData instance);
-        void Process(AlgoInstanceData instance, DateTime timeOfProcess);
-        void Shutdown(AlgoInstanceData instance);
+        string BotProcessorName { get; }
+        void Initialise(BotInstanceData instance);
+        void Process(BotInstanceData instance, DateTime timeOfProcess);
+        void Shutdown(BotInstanceData instance);
     }
 }

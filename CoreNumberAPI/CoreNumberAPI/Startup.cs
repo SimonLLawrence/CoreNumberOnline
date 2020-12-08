@@ -2,6 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CoreNumberAPI.Factory;
+using CoreNumberAPI.Processors;
+using CoreNumberAPI.Repository;
+using CoreNumberAPI.Services;
+using CoreNumberBot;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -27,6 +32,13 @@ namespace CoreNumberAPI
         {
             services.AddControllers();
             services.AddSwaggerGen();
+            services.AddTransient<IBotProcessManager, BotProcessManager>();
+            services.AddTransient<IExchangeFactory, ExchangeFactory>();
+            services.AddTransient<IBotProcessorFactory, BotProcessorFactory>();
+            services.AddSingleton<IBotInstanceDataRepository, MemoryBotInstanceDataRepository>();
+            services.AddSingleton<ISecretDataRepository, MemorySecretDataRepository>();
+            services.AddTransient<IBotProcessor, CoreNumberProcessor>();
+            services.AddTransient<IExchange, BinanceService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
