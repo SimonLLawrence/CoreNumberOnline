@@ -11,14 +11,14 @@ namespace CoreNumberAPI.Processors
     public class AlgoProcessManager : IAlgoProcessManager
     {
         private IExchangeFactory _exchangeFactory;
-        private ISecretFactory _secretFactory;
+        private ISecretDataRepository _secretRepository;
         private IAlgoProcessorFactory _algoProcessorFactory;
         private IAlgoInstanceDataRepository _algoInstanceRepository;
 
-        public AlgoProcessManager(IExchangeFactory exchangeFactory, ISecretFactory secretFactory, IAlgoProcessorFactory algoProcessorFactory, IAlgoInstanceDataRepository algoInstanceRepository)
+        public AlgoProcessManager(IExchangeFactory exchangeFactory,  IAlgoProcessorFactory algoProcessorFactory, IAlgoInstanceDataRepository algoInstanceRepository, ISecretDataRepository secretRepository)
         {
             _exchangeFactory = exchangeFactory;
-            _secretFactory = secretFactory;
+            _secretRepository = secretRepository;
             _algoProcessorFactory = algoProcessorFactory;
             _algoInstanceRepository = algoInstanceRepository;
             State = "INITIALIZED";
@@ -43,15 +43,16 @@ namespace CoreNumberAPI.Processors
                 var instances = _algoInstanceRepository.GetAllAlgoInstanceData();
                 foreach (var algoInstanceData in instances)
                 {
-                    ExecuteAlgo(algoInstanceData);
+                    ExecuteAlgo(algoInstanceData.Id.ToString());
                 }
             }
         }
 
-        public void ExecuteAlgo(AlgoInstanceData instance)
+        public void ExecuteAlgo(string algoInstanceId)
         {
             if (State == "RUNNING")
             {
+                var instance = _algoInstanceRepository.GetAlgoInstanceData(algoInstanceId);
                 var processor = _algoProcessorFactory.GetAlgoProcessor(instance.ProcessorID);
                 if (instance.State =="CREATED")
                 {
@@ -67,28 +68,28 @@ namespace CoreNumberAPI.Processors
 
         public void StartAlgo(string algoInstanceId)
         {
-            var algoInstance = _algoInstanceRepository.GetAlgoInstanceData(Guid.Parse(algoInstanceId));
+            var algoInstance = _algoInstanceRepository.GetAlgoInstanceData(algoInstanceId);
             algoInstance.State = "STARTED";
             _algoInstanceRepository.Save(algoInstance);
         }
 
         public void StopAlgo(string algoInstanceId)
         {
-            var algoInstance = _algoInstanceRepository.GetAlgoInstanceData(Guid.Parse(algoInstanceId));
+            var algoInstance = _algoInstanceRepository.GetAlgoInstanceData(algoInstanceId);
             algoInstance.State = "STOPPED";
             _algoInstanceRepository.Save(algoInstance);
         }
 
-        public string CreateAlgo(string algoName, string exchangeName, string secretId)
+        public string CreateAlgo(string algoName, string exchangeName, string key , string secret, string subAccount = null)
         {
             var algoInstId = Guid.NewGuid();
             var algo = _algoProcessorFactory.GetAlgoProcessor(algoName);
             var exch = _exchangeFactory.GetExchange(exchangeName);
-            var secr = _secretFactory.GetApiSecret(secretId);
+            var secr = CreateSecret(key,secret, subAccount);
             var newInstance = new AlgoInstanceData
             {
                 Id = algoInstId,
-                SecretID = secr.SecretId,
+                SecretID = secr,
                 ExchangeID = exch.ExchangeName,
                 ProcessorID = algo.AlgorithmName,
                 State = "CREATED"
@@ -97,9 +98,26 @@ namespace CoreNumberAPI.Processors
             return algoInstId.ToString();
         }
 
-        public void DestroyAlgo(string algoInstanceId)
+        public string CreateSecret(string key, string secret, string subaccount = null)
         {
-            throw new NotImplementedException();
+            var secretObject = new ApiSecrets
+            {
+                SecretId = Guid.NewGuid().ToString(),
+                Key = key,
+                Secret = secret,
+                SubaccountName = subaccount
+            };
+            _secretRepository.Save(secretObject);
+            return secretObject.SecretId;
+        }
+
+        public void ShutdownAlgo(string algoInstanceId)
+        {
+            var algoInstance = _algoInstanceRepository.GetAlgoInstanceData(algoInstanceId);
+            var algo = _algoProcessorFactory.GetAlgoProcessor(algoInstance.ProcessorID);
+            algo.Shutdown(algoInstance);
+            algoInstance.State = "SHUTDOWN";
+            _algoInstanceRepository.Save(algoInstance);
         }
     }
 }

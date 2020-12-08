@@ -4,10 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using CoreNumberAPI.Model;
 
-namespace CoreNumberAPI.Factory
+namespace CoreNumberAPI.Repository
 {
-    public interface ISecretFactory
+    public interface ISecretDataRepository
     {
         IApiSecrets GetApiSecret(string secretId);
+        void Save(IApiSecrets secret);
     }
 }

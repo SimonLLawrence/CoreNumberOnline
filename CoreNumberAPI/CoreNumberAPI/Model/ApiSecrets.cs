@@ -10,5 +10,6 @@ namespace CoreNumberAPI.Model
         public string SecretId { get; set; }
         public string Secret { get; set; }
         public string Key { get; set; }
+        public string SubaccountName { get; set; }
     }
 }

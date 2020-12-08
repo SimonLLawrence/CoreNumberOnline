@@ -8,7 +8,7 @@ namespace CoreNumberAPI.Repository
 {
     public interface IAlgoInstanceDataRepository
     {
-        AlgoInstanceData GetAlgoInstanceData(Guid id);
+        AlgoInstanceData GetAlgoInstanceData(string id);
         IEnumerable<AlgoInstanceData> GetAllAlgoInstanceData();
         void Save(AlgoInstanceData algoInstanceData);
     }

@@ -6,16 +6,17 @@ using CoreNumberAPI.Model;
 
 namespace CoreNumberAPI.Processors
 {
-    interface IAlgoProcessManager
+    public interface IAlgoProcessManager
     {
         string State { get; set; }
         void StartProcessingAlgos();
         void StopProcessingAlgos();
         void ExecuteAllAlgos();
-        void ExecuteAlgo(AlgoInstanceData instance);
+        void ExecuteAlgo(string algoInstanceId);
         void StartAlgo(string algoInstanceId);
         void StopAlgo(string algoInstanceId);
-        string CreateAlgo(string algoName, string exchangeName, string secretId);
-        void DestroyAlgo(string algoInstanceId);
+        string CreateAlgo(string algoName, string exchangeName, string key, string secret, string subaccount);
+        string CreateSecret(string key, string secret, string subaccount);
+        void ShutdownAlgo(string algoInstanceId);
     }
 }
