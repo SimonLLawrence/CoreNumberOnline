@@ -17,5 +17,11 @@ namespace CoreNumberAPI.Factory
         {
             return  _availableExchanges.FirstOrDefault(x => x.ExchangeName == exchangeId);
         }
+
+        public List<string> GetSupportedExchanges()
+        {
+            return _availableExchanges.Select(se => se.ExchangeName).ToList();
+        }
+
     }
 }

@@ -19,5 +19,10 @@ namespace CoreNumberAPI.Factory
         {
             return _botProcessors.FirstOrDefault(a=>a.BotProcessorName == botNameId);
         }
+
+        public List<string> GetSupportedProcessors()
+        {
+           return _botProcessors.Select(bp => bp.BotProcessorName).ToList();
+        }
     }
 }

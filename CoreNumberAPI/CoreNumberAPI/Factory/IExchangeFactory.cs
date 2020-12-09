@@ -9,5 +9,6 @@ namespace CoreNumberAPI.Factory
     public interface IExchangeFactory
     {
         IExchange GetExchange(string exchangeId);
+        public List<string> GetSupportedExchanges();
     }
 }

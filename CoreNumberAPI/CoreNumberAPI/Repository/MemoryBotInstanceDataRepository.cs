@@ -8,7 +8,7 @@ namespace CoreNumberAPI.Repository
 {
     public class MemoryBotInstanceDataRepository : IBotInstanceDataRepository
     {
-        private static Dictionary<string,BotInstanceData> Data = new Dictionary<string, BotInstanceData>();
+        private static readonly Dictionary<string,BotInstanceData> Data = new Dictionary<string, BotInstanceData>();
         
         public BotInstanceData GetBotInstanceData(string id)
         {

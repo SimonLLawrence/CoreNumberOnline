@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CoreNumberAPI.Factory;
 using CoreNumberAPI.Model;
 using CoreNumberAPI.Processors;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,15 @@ namespace CoreNumberAPI.Controllers
     {
         private readonly ILogger<BotManagerController> _logger;
         private readonly IBotProcessManager _botProcessManager;
+        private readonly IExchangeFactory _exchangeFactory;
+        private readonly IBotProcessorFactory _botProcessorFactory;
 
-        public BotManagerController(ILogger<BotManagerController> logger, IBotProcessManager botProcessManager)
+        public BotManagerController(ILogger<BotManagerController> logger, IBotProcessManager botProcessManager , IExchangeFactory exchangeFactory, IBotProcessorFactory botProcessorFactory)
         {
             _logger = logger;
             _botProcessManager = botProcessManager;
+            _exchangeFactory = exchangeFactory;
+            _botProcessorFactory = botProcessorFactory;
         }
 
         [HttpPost]
@@ -84,6 +89,20 @@ namespace CoreNumberAPI.Controllers
         {
             _botProcessManager.ShutdownBot(instanceId);
             return Ok();
+        }
+
+        [HttpGet]
+        [Route("SupportedExchanges")]
+        public List<string> GetSupportedExchanges()
+        {
+            return _exchangeFactory.GetSupportedExchanges();
+        }
+
+        [HttpGet]
+        [Route("SupportedProcessors")]
+        public List<string> GetSupportedProcessors()
+        {
+            return _botProcessorFactory.GetSupportedProcessors();
         }
     }
 }

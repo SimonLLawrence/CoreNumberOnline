@@ -9,5 +9,6 @@ namespace CoreNumberAPI.Factory
     public interface IBotProcessorFactory
     {
         IBotProcessor GetBotProcessor(string botNameId);
+        public List<string> GetSupportedProcessors();
     }
 }
