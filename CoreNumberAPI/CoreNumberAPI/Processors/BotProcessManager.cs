@@ -111,6 +111,21 @@ namespace CoreNumberAPI.Processors
             return secretObject.SecretId;
         }
 
+        public string GetConfiguration(string botInstanceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetConfiguration(string botInstanceId, string configurationJson)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void TradingViewAlertEndpoint(string jsonPayload)
+        {
+            throw new NotImplementedException();
+        }
+
         public void ShutdownBot(string botInstanceId)
         {
             var botInstance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
