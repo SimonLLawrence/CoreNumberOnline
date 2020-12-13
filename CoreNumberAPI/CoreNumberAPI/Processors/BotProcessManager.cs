@@ -5,23 +5,27 @@ using System.Threading.Tasks;
 using CoreNumberAPI.Factory;
 using CoreNumberAPI.Model;
 using CoreNumberAPI.Repository;
+using CoreNumberAPI.Services;
 
 namespace CoreNumberAPI.Processors
 {
     public class BotProcessManager : IBotProcessManager
     {
-        private IExchangeFactory _exchangeFactory;
-        private ISecretDataRepository _secretRepository;
-        private IBotProcessorFactory _botProcessorFactory;
-        private IBotInstanceDataRepository _botInstanceRepository;
-        private IDictionary<string, List<Dictionary<string, string>>> TradingViewUpdates = new Dictionary<string, List<Dictionary<string, string>>>();
+        private readonly IExchangeFactory _exchangeFactory;
+        private readonly ISecretDataRepository _secretRepository;
+        private readonly IBotProcessorFactory _botProcessorFactory;
+        private readonly IBotInstanceDataRepository _botInstanceRepository;
+        private readonly ITradingViewAlertService _tradingViewAlertService;
+        private readonly IInstanceConfigurationService _instanceConfigurationService;
 
-        public BotProcessManager(IExchangeFactory exchangeFactory,  IBotProcessorFactory botProcessorFactory, IBotInstanceDataRepository botInstanceRepository, ISecretDataRepository secretRepository)
+        public BotProcessManager(IExchangeFactory exchangeFactory,  IBotProcessorFactory botProcessorFactory, IBotInstanceDataRepository botInstanceRepository, ISecretDataRepository secretRepository, ITradingViewAlertService tradingViewAlertService , IInstanceConfigurationService instanceConfigurationService)
         {
             _exchangeFactory = exchangeFactory;
             _secretRepository = secretRepository;
             _botProcessorFactory = botProcessorFactory;
             _botInstanceRepository = botInstanceRepository;
+            _tradingViewAlertService = tradingViewAlertService;
+            _instanceConfigurationService = instanceConfigurationService;
             State = "INITIALIZED";
         }
 
@@ -41,18 +45,7 @@ namespace CoreNumberAPI.Processors
         {
             if (State == "RUNNING")
             {
-                foreach( var instanceKey in TradingViewUpdates.Keys.ToList())
-                {
-                    foreach( var updateData in TradingViewUpdates[instanceKey])
-                    {
-                        SetConfiguration(instanceKey, updateData);
-                        TradingViewUpdates[instanceKey].Remove(updateData);
-                    }
-                    if (TradingViewUpdates[instanceKey].Count == 0)
-                    {
-                        TradingViewUpdates.Remove(instanceKey);
-                    }
-                }
+                _tradingViewAlertService.ProcessAllTradingViewUpdates();
 
                 var instances = _botInstanceRepository.GetAllBotInstanceData();
                 foreach (var botInstanceData in instances)
@@ -62,25 +55,15 @@ namespace CoreNumberAPI.Processors
             }
         }
 
+
         public void ExecuteBot(string botInstanceId)
         {
             if (State == "RUNNING")
             {
                 var instance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
                 var processor = _botProcessorFactory.GetBotProcessor(instance.ProcessorID);
-               
-                if (TradingViewUpdates.ContainsKey(botInstanceId))
-                {
-                    TradingViewUpdates[botInstanceId].ToList().ForEach(updateData =>
-                    {
-                        SetConfiguration(botInstanceId, updateData);
-                        TradingViewUpdates[botInstanceId].Remove(updateData);
-                    });
-                    if (TradingViewUpdates[botInstanceId].Count == 0)
-                    {
-                        TradingViewUpdates.Remove(botInstanceId);
-                    }
-                }
+
+                _tradingViewAlertService.ProcessTradingViewUpdates(botInstanceId);
 
                 if (instance.State =="CREATED")
                 {
@@ -94,6 +77,7 @@ namespace CoreNumberAPI.Processors
                 }
             }
         }
+
 
         public void StartBot(string botInstanceId)
         {
@@ -140,32 +124,20 @@ namespace CoreNumberAPI.Processors
             return secretObject.SecretId;
         }
 
-        public void AddTradingViewUpdate(string botInstanceId, Dictionary<string,string> UpdateVariables)
-        {
-            if (TradingViewUpdates.ContainsKey(botInstanceId))
-            {
-                TradingViewUpdates[botInstanceId].Add(UpdateVariables);
-            }
-            else
-            {
-                TradingViewUpdates[botInstanceId] = new List<Dictionary<string, string>>
-                {
-                    UpdateVariables
-                };
-            }
-        }
 
         public Dictionary<string,string> GetConfiguration(string botInstanceId)
         {
-            var botInstance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
-            return botInstance.GetVariables();
+            return _instanceConfigurationService.GetConfiguration(botInstanceId);
         }
 
         public void SetConfiguration(string botInstanceId, Dictionary<string,string> variables)
         {
-            var botInstance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
-            botInstance.SetVariables(variables);
-            _botInstanceRepository.Save(botInstance);
+            _instanceConfigurationService.SetConfiguration(botInstanceId,variables);
+        }
+
+        public void AddTradingViewUpdate(string botInstanceId, Dictionary<string, string> payload)
+        {
+            _tradingViewAlertService.AddTradingViewUpdate(botInstanceId,payload);
         }
 
         public void ShutdownBot(string botInstanceId)

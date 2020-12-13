@@ -31,7 +31,7 @@ namespace CoreNumberAPI.Controllers
         [Route("CreateBot")]
         public string CreateBot(CreateBotRequestModel createBot)
         {
-            var botId =_botProcessManager.CreateBot(createBot.BotName, createBot.ExchangeName, createBot.Key, createBot.Secret, createBot.Subaccount);
+            var botId =_botProcessManager.CreateBot(createBot.BotProcessorName, createBot.ExchangeName, createBot.Key, createBot.Secret, createBot.Subaccount);
             return botId;
         }
 
@@ -109,7 +109,7 @@ namespace CoreNumberAPI.Controllers
         [Route("TradingViewAlert")]
         public ActionResult GetSupportedProcessors(string botInstanceId, Dictionary<string,string> payload)
         {
-            _botProcessManager.SetConfiguration(botInstanceId, payload);
+            _botProcessManager.AddTradingViewUpdate(botInstanceId, payload);
             return Ok();
         }
 

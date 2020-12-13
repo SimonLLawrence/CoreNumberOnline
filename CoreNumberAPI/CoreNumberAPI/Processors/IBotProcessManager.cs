@@ -19,6 +19,7 @@ namespace CoreNumberAPI.Processors
         string CreateSecret(string key, string secret, string subaccount);
         Dictionary<string,string> GetConfiguration(string botInstanceId);
         void SetConfiguration(string botInstanceId, Dictionary<string,string> variables);
+        void AddTradingViewUpdate(string botInstanceId, Dictionary<string, string> payload);
         void ShutdownBot(string botInstanceId);
     }
 }

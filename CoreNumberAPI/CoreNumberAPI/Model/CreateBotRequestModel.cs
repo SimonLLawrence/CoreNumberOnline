@@ -7,7 +7,7 @@ namespace CoreNumberAPI.Model
 {
     public class CreateBotRequestModel
     {
-        public string BotName { get; set; }
+        public string BotProcessorName { get; set; }
         public string ExchangeName { get; set; }
         public string Key { get; set; } 
         public string Secret { get; set; }

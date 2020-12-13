@@ -35,10 +35,12 @@ namespace CoreNumberAPI
             services.AddTransient<IBotProcessManager, BotProcessManager>();
             services.AddTransient<IExchangeFactory, ExchangeFactory>();
             services.AddTransient<IBotProcessorFactory, BotProcessorFactory>();
-            services.AddSingleton<IBotInstanceDataRepository, MemoryBotInstanceDataRepository>();
-            services.AddSingleton<ISecretDataRepository, MemorySecretDataRepository>();
             services.AddTransient<IBotProcessor, CoreNumberProcessor>();
             services.AddTransient<IExchange, BinanceService>();
+            services.AddTransient<IInstanceConfigurationService, InstanceConfigurationService>();
+            services.AddSingleton<ITradingViewAlertService, TradingViewAlertService>();
+            services.AddSingleton<IBotInstanceDataRepository, MemoryBotInstanceDataRepository>();
+            services.AddSingleton<ISecretDataRepository, MemorySecretDataRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
