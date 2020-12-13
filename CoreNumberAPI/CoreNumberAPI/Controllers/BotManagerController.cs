@@ -104,5 +104,28 @@ namespace CoreNumberAPI.Controllers
         {
             return _botProcessorFactory.GetSupportedProcessors();
         }
+
+        [HttpPost]
+        [Route("TradingViewAlert")]
+        public ActionResult GetSupportedProcessors(string botInstanceId, Dictionary<string,string> payload)
+        {
+            _botProcessManager.SetConfiguration(botInstanceId, payload);
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("SetConfiguration")]
+        public ActionResult SetVariables(string botInstanceId, Dictionary<string, string> payload)
+        {
+            _botProcessManager.SetConfiguration(botInstanceId, payload);
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("GetConfiguration")]
+        public Dictionary<string,string> GetVariables(string botInstanceId)
+        {
+            return _botProcessManager.GetConfiguration(botInstanceId);
+        }
     }
 }

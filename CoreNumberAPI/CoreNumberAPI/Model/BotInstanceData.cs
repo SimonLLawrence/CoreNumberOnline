@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace CoreNumberAPI.Model
 {
-    public class BotInstanceData
+    public class BotInstanceData : IBotInstanceData
     {
         // State , dependancy plumbing 
         public Guid Id { get; set; }
@@ -35,6 +35,16 @@ namespace CoreNumberAPI.Model
         public decimal TokenDollarValue => TokenPrice * TokenSize;
         public decimal EstimatedPnL => (TokenDollarValue + CashTokenValue) -
                                        ((StartingTokenSize * TokenPrice) + StartingCashAmount);
-        public IEnumerable<Order> OutstandingOrders { get; set; } = new List<Order>();        
+        public IEnumerable<Order> OutstandingOrders { get; set; } = new List<Order>();
+
+        public Dictionary<string, string> GetVariables()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetVariables(Dictionary<string, string> variables)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

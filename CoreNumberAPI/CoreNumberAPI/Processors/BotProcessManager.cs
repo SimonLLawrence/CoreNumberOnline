@@ -14,6 +14,7 @@ namespace CoreNumberAPI.Processors
         private ISecretDataRepository _secretRepository;
         private IBotProcessorFactory _botProcessorFactory;
         private IBotInstanceDataRepository _botInstanceRepository;
+        private IDictionary<string, List<Dictionary<string, string>>> TradingViewUpdates = new Dictionary<string, List<Dictionary<string, string>>>();
 
         public BotProcessManager(IExchangeFactory exchangeFactory,  IBotProcessorFactory botProcessorFactory, IBotInstanceDataRepository botInstanceRepository, ISecretDataRepository secretRepository)
         {
@@ -40,6 +41,19 @@ namespace CoreNumberAPI.Processors
         {
             if (State == "RUNNING")
             {
+                foreach( var instanceKey in TradingViewUpdates.Keys.ToList())
+                {
+                    foreach( var updateData in TradingViewUpdates[instanceKey])
+                    {
+                        SetConfiguration(instanceKey, updateData);
+                        TradingViewUpdates[instanceKey].Remove(updateData);
+                    }
+                    if (TradingViewUpdates[instanceKey].Count == 0)
+                    {
+                        TradingViewUpdates.Remove(instanceKey);
+                    }
+                }
+
                 var instances = _botInstanceRepository.GetAllBotInstanceData();
                 foreach (var botInstanceData in instances)
                 {
@@ -54,12 +68,27 @@ namespace CoreNumberAPI.Processors
             {
                 var instance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
                 var processor = _botProcessorFactory.GetBotProcessor(instance.ProcessorID);
+               
+                if (TradingViewUpdates.ContainsKey(botInstanceId))
+                {
+                    TradingViewUpdates[botInstanceId].ToList().ForEach(updateData =>
+                    {
+                        SetConfiguration(botInstanceId, updateData);
+                        TradingViewUpdates[botInstanceId].Remove(updateData);
+                    });
+                    if (TradingViewUpdates[botInstanceId].Count == 0)
+                    {
+                        TradingViewUpdates.Remove(botInstanceId);
+                    }
+                }
+
                 if (instance.State =="CREATED")
                 {
                     processor.Initialise(instance);
                 }
                 if (instance.State == "STARTED")
                 {
+                   
                     processor.Process(instance, DateTime.UtcNow);
                     _botInstanceRepository.Save(instance);
                 }
@@ -111,28 +140,44 @@ namespace CoreNumberAPI.Processors
             return secretObject.SecretId;
         }
 
-        public string GetConfiguration(string botInstanceId)
+        public void AddTradingViewUpdate(string botInstanceId, Dictionary<string,string> UpdateVariables)
         {
-            throw new NotImplementedException();
+            if (TradingViewUpdates.ContainsKey(botInstanceId))
+            {
+                TradingViewUpdates[botInstanceId].Add(UpdateVariables);
+            }
+            else
+            {
+                TradingViewUpdates[botInstanceId] = new List<Dictionary<string, string>>
+                {
+                    UpdateVariables
+                };
+            }
         }
 
-        public void SetConfiguration(string botInstanceId, string configurationJson)
+        public Dictionary<string,string> GetConfiguration(string botInstanceId)
         {
-            throw new NotImplementedException();
+            var botInstance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
+            return botInstance.GetVariables();
         }
 
-        public void TradingViewAlertEndpoint(string jsonPayload)
+        public void SetConfiguration(string botInstanceId, Dictionary<string,string> variables)
         {
-            throw new NotImplementedException();
+            var botInstance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
+            botInstance.SetVariables(variables);
+            _botInstanceRepository.Save(botInstance);
         }
 
         public void ShutdownBot(string botInstanceId)
         {
             var botInstance = _botInstanceRepository.GetBotInstanceData(botInstanceId);
+            botInstance.State = "SHUTING_DOWN"; 
+            _botInstanceRepository.Save(botInstance);
+
             var botProcessor = _botProcessorFactory.GetBotProcessor(botInstance.ProcessorID);
             botProcessor.Shutdown(botInstance);
             botInstance.State = "SHUTDOWN";
             _botInstanceRepository.Save(botInstance);
-        }
+        }        
     }
 }

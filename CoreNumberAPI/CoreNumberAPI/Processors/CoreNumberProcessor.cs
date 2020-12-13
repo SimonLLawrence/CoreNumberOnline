@@ -18,7 +18,7 @@ namespace CoreNumberBot
         private IExchangeFactory _exchangeFactory;
         private IBotInstanceDataRepository _botInstanceRepository;
         private IExchange _exchange = null;
-        private BotInstanceData _botInstanceData;
+        private IBotInstanceData _botInstanceData;
         private DateTime _currentProcessingTime;
 
         public CoreNumberProcessor(IExchangeFactory exchangeFactory,  IBotInstanceDataRepository botInstanceRepository)
@@ -27,14 +27,14 @@ namespace CoreNumberBot
             _botInstanceRepository = botInstanceRepository;
         }
 
-        public void Initialise(BotInstanceData instance)
+        public void Initialise(IBotInstanceData instance)
         {
             _botInstanceData = instance;
             _exchange = _exchangeFactory.GetExchange(instance.ExchangeID);
             _exchange.OpenClient(instance.SecretID);
         }
 
-        public void Process(BotInstanceData instance, DateTime utcNow)
+        public void Process(IBotInstanceData instance, DateTime utcNow)
         {
             _currentProcessingTime = utcNow;
             OutstandingOrders(instance);
@@ -46,7 +46,7 @@ namespace CoreNumberBot
             CalculatePnL(instance);
         }
 
-        public void Shutdown(BotInstanceData instance)
+        public void Shutdown(IBotInstanceData instance)
         {
             Console.WriteLine($"Shutting down algo instance {instance.Id}");
         }
@@ -54,71 +54,74 @@ namespace CoreNumberBot
         public string BotProcessorName { get; } = "CoreNumberCompound";
 
   
-        private BotInstanceData OutstandingOrders(BotInstanceData instance)
+        private BotInstanceData OutstandingOrders(IBotInstanceData instance)
         {
-            instance.OutstandingOrders = _exchange.GetOpenOrders(instance.TokenSymbol, instance.CashTokenSymbol);
-            return instance;
+            BotInstanceData data = (BotInstanceData)instance;
+            data.OutstandingOrders = _exchange.GetOpenOrders(data.TokenSymbol, data.CashTokenSymbol);
+            return data;
         }
 
-        private void CalculatePnL(BotInstanceData instance)
+        private void CalculatePnL(IBotInstanceData instance)
         {
-            var daysRunning = (DateTime.Now - instance.StartingDate).Days;
+            BotInstanceData data = (BotInstanceData)instance;
+            var daysRunning = (DateTime.Now - data.StartingDate).Days;
             if (daysRunning == 0)
             {
-                Console.WriteLine($"Estimated PnL is {instance.EstimatedPnL}");
+                Console.WriteLine($"Estimated PnL is {data.EstimatedPnL}");
             }
             else
             {
-                var dailyProfit = instance.EstimatedPnL / daysRunning;
-                var dailyProfitPerc = (dailyProfit / (instance.StartingCashAmount + (instance.StartingTokenSize * instance.TokenPrice)))*100;
-                var currentTotal = instance.CashTokenValue + (instance.TokenSize * instance.TokenPrice);
-                var initalTotal = instance.StartingCashAmount + (instance.StartingTokenSize * instance.TokenPrice);
+                var dailyProfit = data.EstimatedPnL / daysRunning;
+                var dailyProfitPerc = (dailyProfit / (data.StartingCashAmount + (data.StartingTokenSize * data.TokenPrice)))*100;
+                var currentTotal = data.CashTokenValue + (data.TokenSize * data.TokenPrice);
+                var initalTotal = data.StartingCashAmount + (data.StartingTokenSize * data.TokenPrice);
                 Console.WriteLine($"Initial value {initalTotal}");
                 Console.WriteLine($"Current value {currentTotal}");
                 Console.WriteLine($"Gain is ${currentTotal - initalTotal}");
-                Console.WriteLine($"Estimated PnL per day is ${instance.EstimatedPnL / daysRunning} or {dailyProfitPerc}%, running for {daysRunning} days");
+                Console.WriteLine($"Estimated PnL per day is ${data.EstimatedPnL / daysRunning} or {dailyProfitPerc}%, running for {daysRunning} days");
             }
         }
 
-        private BotInstanceData OrderCorrectionAmount(BotInstanceData instance)
+        private BotInstanceData OrderCorrectionAmount(IBotInstanceData instance)
         {
-            if (instance.BuySellAmount != 0)
+            BotInstanceData data = (BotInstanceData)instance;
+            if (data.BuySellAmount != 0)
             {
                 CancelExistingOrder(instance);
-                var side = instance.BuySellAmount > 0 ? "BUY" : "SELL";
+                var side = data.BuySellAmount > 0 ? "BUY" : "SELL";
 
-                if (side == "BUY" && instance.BuySellAmount > instance.CashTokenValue)
+                if (side == "BUY" && data.BuySellAmount > data.CashTokenValue)
                 {
-                    return instance;
+                    return data;
                 }
 
-                var symbol = $"{instance.TokenSymbol}{instance.CashTokenSymbol}";
-                var size = decimal.Round(Math.Abs(instance.BuySellAmount) / instance.TokenAskPrice, 2);
-                var price = decimal.Round(instance.TokenAskPrice, 4);
+                var symbol = $"{data.TokenSymbol}{data.CashTokenSymbol}";
+                var size = decimal.Round(Math.Abs(data.BuySellAmount) / data.TokenAskPrice, 2);
+                var price = decimal.Round(data.TokenAskPrice, 4);
 
-                if ((size * price) < instance.MinimumDollarPurchaceSize)
+                if ((size * price) < data.MinimumDollarPurchaceSize)
                 {
-                    size = decimal.Round(instance.MinimumDollarPurchaceSize / price,2);
+                    size = decimal.Round(data.MinimumDollarPurchaceSize / price,2);
                 }
 
                 Console.WriteLine($"Placing order {symbol} {side} for {size} at {price} = {price * size} dollars");
                 var order = new Order
                 {
-                    Symbol = instance.TokenSymbol,
-                    DenominatorSybol = instance.CashTokenSymbol,
+                    Symbol = data.TokenSymbol,
+                    DenominatorSybol = data.CashTokenSymbol,
                     Size = size,
                     Side = side,
                     Price = price
                 };
                 _exchange.CreateOrder(order);
             }
-            return instance;
+            return data;
         }
 
-        private BotInstanceData CancelExistingOrder(BotInstanceData instance)
+        private BotInstanceData CancelExistingOrder(IBotInstanceData instance)
         {
-         
-            foreach (var openOrder in instance.OutstandingOrders)
+            BotInstanceData data = (BotInstanceData)instance;
+            foreach (var openOrder in data.OutstandingOrders)
             {
                 try
                 {
@@ -130,79 +133,85 @@ namespace CoreNumberBot
                     Console.WriteLine($"Exception canceling order  {openOrder.Reference}" + ex.ToString());
                 }
             }
-            return instance;
+            return data;
         }
 
-        public BotInstanceData SetCoreNumber(BotInstanceData instance)
+        public BotInstanceData SetCoreNumber(IBotInstanceData instance)
         {
-            if (!instance.OutstandingOrders.Any() || instance.CoreNumber == 0 )
+            BotInstanceData data = (BotInstanceData)instance;
+
+            if (!data.OutstandingOrders.Any() || data.CoreNumber == 0 )
             {
-                Console.WriteLine($"Checking core number {instance.CoreNumber}");
+                Console.WriteLine($"Checking core number {data.CoreNumber}");
 
-                decimal cashAsPercentageOfTokenCashValue = (instance.CashTokenValue / instance.TokenDollarValue) * 100;
+                decimal cashAsPercentageOfTokenCashValue = (data.CashTokenValue / data.TokenDollarValue) * 100;
 
-                Console.WriteLine($"Token value {instance.TokenDollarValue}, cash on hand {instance.CashTokenValue} as percentage {cashAsPercentageOfTokenCashValue}");
+                Console.WriteLine($"Token value {data.TokenDollarValue}, cash on hand {data.CashTokenValue} as percentage {cashAsPercentageOfTokenCashValue}");
 
-                if (instance.CashTokenValue == 0)
+                if (data.CashTokenValue == 0)
                 {
-                    instance.CoreNumber = instance.TokenDollarValue - ((instance.TokenDollarValue / 100) * instance.CashValueStartingPercentage);
-                    Console.WriteLine($"Zero cash available setting core number to {instance.CoreNumber}");
+                    data.CoreNumber = data.TokenDollarValue - ((data.TokenDollarValue / 100) * data.CashValueStartingPercentage);
+                    Console.WriteLine($"Zero cash available setting core number to {data.CoreNumber}");
                 }
-                else if (cashAsPercentageOfTokenCashValue <= instance.CashValueMinimumPercentage)
+                else if (cashAsPercentageOfTokenCashValue <= data.CashValueMinimumPercentage)
                 {
-                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} < minimum percentage {instance.CashValueMinimumPercentage}");
-                    instance.CoreNumber = (instance.TokenDollarValue + instance.CashTokenValue) - (((instance.TokenDollarValue + instance.CashTokenValue) / 100) * instance.CashValueStartingPercentage);
-                    Console.WriteLine($"Setting core number to {instance.CoreNumber}");
+                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} < minimum percentage {data.CashValueMinimumPercentage}");
+                    data.CoreNumber = (data.TokenDollarValue + data.CashTokenValue) - (((data.TokenDollarValue + data.CashTokenValue) / 100) * data.CashValueStartingPercentage);
+                    Console.WriteLine($"Setting core number to {data.CoreNumber}");
                 }
-                else if (cashAsPercentageOfTokenCashValue >= instance.CashValueMaximumPercentage)
+                else if (cashAsPercentageOfTokenCashValue >= data.CashValueMaximumPercentage)
                 {
-                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} > minimum percentage {instance.CashValueMinimumPercentage}");
-                    instance.CoreNumber = (instance.TokenDollarValue + instance.CashTokenValue) - (((instance.TokenDollarValue + instance.CashTokenValue) / 100) * instance.CashValueStartingPercentage);
-                    Console.WriteLine($"Setting core number to {instance.CoreNumber}");
+                    Console.WriteLine($"Percentage cash available {cashAsPercentageOfTokenCashValue} > minimum percentage {data.CashValueMinimumPercentage}");
+                    data.CoreNumber = (data.TokenDollarValue + data.CashTokenValue) - (((data.TokenDollarValue + data.CashTokenValue) / 100) * data.CashValueStartingPercentage);
+                    Console.WriteLine($"Setting core number to {data.CoreNumber}");
                 }
 
-                if (instance.CoreNumber == 0)
+                if (data.CoreNumber == 0)
                 {
                     Console.WriteLine("Core number not currently available");
-                    instance.CoreNumber = (instance.TokenDollarValue + instance.CashTokenValue) - (((instance.TokenDollarValue + instance.CashTokenValue) / 100) * instance.CashValueStartingPercentage);
-                    Console.WriteLine($"Setting core number to {instance.CoreNumber}");
+                    data.CoreNumber = (data.TokenDollarValue + data.CashTokenValue) - (((data.TokenDollarValue + data.CashTokenValue) / 100) * data.CashValueStartingPercentage);
+                    Console.WriteLine($"Setting core number to {data.CoreNumber}");
                 }
             }
-            return instance;
+            return data;
         }
 
-        private BotInstanceData GetDollarPurchaseAmount(BotInstanceData instance)
+        private BotInstanceData GetDollarPurchaseAmount(IBotInstanceData instance)
         {
+            BotInstanceData data = (BotInstanceData)instance;
+
             Console.WriteLine("Getting dollar purchase amount");
-            instance.BuySellAmount = 0;
-            var correctionPercentage = ((instance.CoreNumber - instance.TokenDollarValue ) / instance.CoreNumber) * 100;
-            Console.WriteLine($"Correction percentage is {Math.Abs(correctionPercentage)}  minimum percentage is {instance.MinimTokenPriceChangePercentage}");
-            if (Math.Abs(correctionPercentage) > instance.MinimTokenPriceChangePercentage)
+            data.BuySellAmount = 0;
+            var correctionPercentage = ((data.CoreNumber - data.TokenDollarValue ) / data.CoreNumber) * 100;
+            Console.WriteLine($"Correction percentage is {Math.Abs(correctionPercentage)}  minimum percentage is {data.MinimTokenPriceChangePercentage}");
+            if (Math.Abs(correctionPercentage) > data.MinimTokenPriceChangePercentage)
             {
                 if (correctionPercentage != 0)
                 {
-                    instance.BuySellAmount = (instance.CoreNumber / 100) * correctionPercentage;
+                    data.BuySellAmount = (data.CoreNumber / 100) * correctionPercentage;
                 }
-                Console.WriteLine($"Setting BuySellAmount to {instance.BuySellAmount}");
+                Console.WriteLine($"Setting BuySellAmount to {data.BuySellAmount}");
             }
-            return instance;
+            return data;
         }
 
-        private BotInstanceData GetCashAndTokenBalance(BotInstanceData instance)
+        private BotInstanceData GetCashAndTokenBalance(IBotInstanceData instance)
         {
-            instance.CashTokenValue = _exchange.GetBalance(instance.CashTokenSymbol);
-            instance.TokenSize = _exchange.GetBalance(instance.TokenSymbol);
-            Console.WriteLine($"Total cash available {instance.CashTokenValue} , number of {instance.TokenSymbol} tokens {instance.TokenSize}");
-            return instance;
+            BotInstanceData data = (BotInstanceData)instance;
+            data.CashTokenValue = _exchange.GetBalance(data.CashTokenSymbol);
+            data.TokenSize = _exchange.GetBalance(data.TokenSymbol);
+            Console.WriteLine($"Total cash available {data.CashTokenValue} , number of {data.TokenSymbol} tokens {data.TokenSize}");
+            return data;
         }
 
-        private BotInstanceData GetCurrentPrice(BotInstanceData instance)
+        private BotInstanceData GetCurrentPrice(IBotInstanceData instance)
         {
-            var price = _exchange.GetPrice(instance.TokenSymbol, instance.CashTokenSymbol);
-            instance.TokenAskPrice = price.AskPrice;
-            instance.TokenBidPrice = price.Price;
-            Console.WriteLine($"Order book for {instance.TokenSymbol} has ask of {instance.TokenAskPrice} and bid of {instance.TokenBidPrice}");
-            return instance;
+            BotInstanceData data = (BotInstanceData)instance;
+            var price = _exchange.GetPrice(data.TokenSymbol, data.CashTokenSymbol);
+            data.TokenAskPrice = price.AskPrice;
+            data.TokenBidPrice = price.Price;
+            Console.WriteLine($"Order book for {data.TokenSymbol} has ask of {data.TokenAskPrice} and bid of {data.TokenBidPrice}");
+            return data;
         }
     }
 }

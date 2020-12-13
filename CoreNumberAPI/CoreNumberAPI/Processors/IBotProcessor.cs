@@ -11,8 +11,8 @@ namespace CoreNumberAPI.Processors
     public interface IBotProcessor
     {
         string BotProcessorName { get; }
-        void Initialise(BotInstanceData instance);
-        void Process(BotInstanceData instance, DateTime timeOfProcess);
-        void Shutdown(BotInstanceData instance);
+        void Initialise(IBotInstanceData instance);
+        void Process(IBotInstanceData instance, DateTime timeOfProcess);
+        void Shutdown(IBotInstanceData instance);
     }
 }

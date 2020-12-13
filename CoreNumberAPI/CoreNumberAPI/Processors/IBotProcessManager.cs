@@ -17,13 +17,8 @@ namespace CoreNumberAPI.Processors
         void StopBot(string botInstanceId);
         string CreateBot(string botProcessorName, string exchangeName, string key, string secret, string subaccount);
         string CreateSecret(string key, string secret, string subaccount);
-
-        string GetConfiguration(string botInstanceId);
-
-        void SetConfiguration(string botInstanceId, string configurationJson);
-
-        void TradingViewAlertEndpoint(string botInstanceId, string jsonPayload);
-
+        Dictionary<string,string> GetConfiguration(string botInstanceId);
+        void SetConfiguration(string botInstanceId, Dictionary<string,string> variables);
         void ShutdownBot(string botInstanceId);
     }
 }
