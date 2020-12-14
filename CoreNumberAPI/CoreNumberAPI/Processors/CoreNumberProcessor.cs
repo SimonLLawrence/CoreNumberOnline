@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
-using Binance.API.Csharp.Client;
-using Binance.API.Csharp.Client.Models.Enums;
+using CoreNumberAPI.Factory;
 using CoreNumberAPI.Model;
-using CoreNumberAPI.Processors;
 using CoreNumberAPI.Repository;
 using CoreNumberAPI.Services;
-using CoreNumberAPI.Factory;
 
-namespace CoreNumberBot
+namespace CoreNumberAPI.Processors
 {
     public class CoreNumberProcessor : IBotProcessor
     {

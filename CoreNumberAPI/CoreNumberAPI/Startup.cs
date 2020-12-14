@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CoreNumberAPI.Factory;
+using CoreNumberAPI.Model;
 using CoreNumberAPI.Processors;
 using CoreNumberAPI.Repository;
 using CoreNumberAPI.Services;
-using CoreNumberBot;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -30,6 +30,16 @@ namespace CoreNumberAPI
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var testSecret = new ApiSecrets
+            {
+                SecretId = Guid.Empty.ToString(),
+                Key = Configuration["TestBinanceSecret:ExchangeKey"],
+                Secret = Configuration["TestBinanceSecret:ExchangeSecret"],
+                SubaccountName = Configuration["TestBinanceSecret:ExchangeAccount"]
+            };
+
+            services.AddSingleton(testSecret);
+
             services.AddControllers();
             services.AddSwaggerGen();
             services.AddTransient<IBotProcessManager, BotProcessManager>();
