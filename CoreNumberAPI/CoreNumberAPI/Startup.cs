@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ServiceStack.Redis;
 
 namespace CoreNumberAPI
 {
@@ -38,6 +39,8 @@ namespace CoreNumberAPI
                 SubaccountName = Configuration["TestBinanceSecret:ExchangeAccount"]
             };
 
+            var redisConnectionString = Configuration["RedisConnections:DevConnectionString"];
+
             services.AddSingleton(testSecret);
 
             services.AddControllers();
@@ -51,6 +54,9 @@ namespace CoreNumberAPI
             services.AddSingleton<ITradingViewAlertService, TradingViewAlertService>();
             services.AddSingleton<IBotInstanceDataRepository, MemoryBotInstanceDataRepository>();
             services.AddSingleton<ISecretDataRepository, MemorySecretDataRepository>();
+
+            services.AddTransient<IRedisClientsManager>(c =>
+                new RedisManagerPool(redisConnectionString));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

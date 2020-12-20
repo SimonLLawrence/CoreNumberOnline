@@ -124,7 +124,6 @@ namespace CoreNumberAPI.Processors
             return secretObject.SecretId;
         }
 
-
         public Dictionary<string,string> GetConfiguration(string botInstanceId)
         {
             return _instanceConfigurationService.GetConfiguration(botInstanceId);

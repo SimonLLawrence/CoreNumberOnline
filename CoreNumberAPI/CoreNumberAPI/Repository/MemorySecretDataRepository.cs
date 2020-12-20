@@ -10,6 +10,14 @@ namespace CoreNumberAPI.Repository
     {
         private static readonly Dictionary<string,IApiSecrets> Data = new Dictionary<string, IApiSecrets>();
 
+        public MemorySecretDataRepository(ApiSecrets testSecret)
+        {
+            if (testSecret != null)
+            {
+                Data.Add(testSecret.SecretId, testSecret);
+            }
+        }
+
         public IApiSecrets GetApiSecret(string secretId)
         {
             return Data.GetValueOrDefault(secretId);
